@@ -1,0 +1,138 @@
+# (a)
+# naive bayes with the binarized data -- Xc_train and Xc_test in the previous exercise
+
+# the fit function on the training set
+naiveBayesFit = function(X,y){
+  X_1 = X[(y == 1),]
+  X_0 = X[(y == 0),]
+  y_1 = y[y == 1]
+  y_0 = y[y == 0]
+  prior_1 = length(y_1)/length(y)
+  prior_0 = 1 - prior_1
+  prior = c(prior_0,prior_1)
+  miu_0 = apply(X_0,2,sum)/length(y_0)
+  miu_1 = apply(X_1,2,sum)/length(y_1)
+  return(list("prior"=prior,"miu1"=miu_1,"miu0"=miu_0))
+}
+
+# the predict function on the test set
+naiveBayesPredict = function(X,parameter){
+  prior = parameter$prior
+  prior_0 = prior[1]
+  prior_1 = prior[2]
+  miu_1 = parameter$miu1
+  miu_0 = parameter$miu0
+  prob_1 = c()
+  prob_0 = c()
+  for (i in c(1:dim(X)[1])){
+    likelihood_1 = 1
+    likelihood_0 = 1
+    x = X[i,]
+    for (j in c(1:length(x))){
+      p_j_1 = (miu_1[j]^x[j])*((1-miu_1[j])^(1-x[j]))
+      p_j_0 = (miu_0[j]^x[j])*((1-miu_0[j])^(1-x[j]))
+      likelihood_1 = likelihood_1*p_j_1
+      likelihood_0 = likelihood_0*p_j_0
+    }
+    prob_1 = c(prob_1,prior_1*likelihood_1)
+    prob_0 = c(prob_0,prior_0*likelihood_0)
+  }
+  prob = prob_1 - prob_0
+  test_result = (prob >= 0) + 0
+  return(test_result)
+}
+
+# calculate and show the error rate
+show_error_binary = function(X_test,y_test,X_train,y_train){
+  parameter = naiveBayesFit(X_train,y_train)
+  y_predict_train = naiveBayesPredict(X_train,parameter)
+  y_predict_test = naiveBayesPredict(X_test,parameter)
+  err_train = sum(y_predict_train != y_train)/length(y_train)
+  err_test = sum(y_predict_test != y_test)/length(y_test)
+  cat("------------------------------ \n")
+  cat("----- show the result (a) ---- \n")
+  cat("------------------------------ \n")
+  cat("naive bayes with binary data \n")
+  cat("training error:",err_train,"\n")
+  cat("testing error:",err_test,"\n")
+  cat("------------------------------ \n")
+}
+
+show_error_binary(Xc_test,y_test,Xc_train,y_train)
+
+# (b)
+# naive bayes with real-valued feature
+
+# the fit function on the training set
+naiveBayesFit_gaussian = function(X,y){
+  X_1 = X[(y == 1),]
+  X_0 = X[(y == 0),]
+  y_1 = y[y == 1]
+  prior_1 = length(y_1)/length(y)
+  prior_0 = 1 - prior_1
+  prior = c(prior_0,prior_1)
+  miu_0 = apply(X_0,2,mean)
+  miu_1 = apply(X_1,2,mean)
+  sigm_0 = apply(X_0,2,var)
+  sigm_1 = apply(X_1,2,var)
+  return(list("prior"=prior,"miu0"=miu_0,"miu1"=miu_1,"sigm0"=sigm_0,"sigm1"=sigm_1))
+}
+
+# the predict function on the test set
+naiveBayesPredict_gaussian = function(X,parameter){
+  prior = parameter$prior
+  prior_0 = prior[1]
+  prior_1 = prior[2]
+  miu_1 = parameter$miu1
+  miu_0 = parameter$miu0
+  sigm_0 = parameter$sigm0
+  sigm_1 = parameter$sigm1
+  prob_1 = c()
+  prob_0 = c()
+  for (i in c(1:dim(X)[1])){
+    likelihood_1 = 1
+    likelihood_0 = 1
+    x = X[i,]
+    for (j in c(1:length(x))){
+      p_j_1 = (1/sqrt(2*pi*sigm_1[j]))*exp((-1)*((x[j]-miu_1[j])^2/(2*sigm_1[j])))
+      p_j_0 = (1/sqrt(2*pi*sigm_0[j]))*exp((-1)*((x[j]-miu_0[j])^2/(2*sigm_0[j])))
+      if (is.nan(p_j_1)==TRUE){p_j_1 = 1}
+      if (is.nan(p_j_0)==TRUE){p_j_0 = 1}
+      likelihood_1 = likelihood_1*p_j_1
+      likelihood_0 = likelihood_0*p_j_0
+    }
+    prob_1 = c(prob_1,prior_1*likelihood_1)
+    prob_0 = c(prob_0,prior_0*likelihood_0)
+  }
+  prob = prob_1 - prob_0
+  test_result = (prob >= 0) + 0
+  return(test_result)
+}
+
+# calculate and show the error rate
+show_error_gaussian = function(Xa_test,Xb_test,y_test,Xa_train,Xb_train,y_train){
+  parameter_a = naiveBayesFit_gaussian(Xa_train,y_train)
+  parameter_b = naiveBayesFit_gaussian(Xb_train,y_train)
+  y_predict_a_train = naiveBayesPredict_gaussian(Xa_train,parameter_a)
+  y_predict_a_test = naiveBayesPredict_gaussian(Xa_test,parameter_a)
+  y_predict_b_train = naiveBayesPredict_gaussian(Xb_train,parameter_b)
+  y_predict_b_test = naiveBayesPredict_gaussian(Xb_test,parameter_b)
+  err_train_a = sum(y_predict_a_train != y_train)/length(y_train)
+  err_test_a = sum(y_predict_a_test != y_test)/length(y_test)
+  err_train_b = sum(y_predict_b_train != y_train)/length(y_train)
+  err_test_b = sum(y_predict_b_test != y_test)/length(y_test)
+  cat("---------------------------------- \n")
+  cat("------- show the result (b) ------ \n")
+  cat("---------------------------------- \n")
+  cat("naive bayes with real-valued data \n")
+  cat("a: stnd \n")
+  cat("training error:",err_train_a,"\n")
+  cat("testing error:",err_test_a,"\n")
+  cat("---------------------------------- \n")
+  cat("b: log \n")
+  cat("training error:",err_train_b,"\n")
+  cat("testing error:",err_test_b,"\n")
+  cat("---------------------------------- \n")
+}
+
+show_error_gaussian(Xa_test,Xb_test,y_test,Xa_train,Xb_train,y_train)
